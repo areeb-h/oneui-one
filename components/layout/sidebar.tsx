@@ -1,335 +1,321 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { debounce } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
-import { useRouter, usePathname } from "next/navigation";
+import * as React from "react"
+import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 import {
-  Search,
   ChevronRight,
-  LogOut,
   Zap,
-  ChevronLeft,
-  SidebarIcon,
-} from "lucide-react";
-import { navigation, utilityItems } from "@/config/navigation";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  LayoutDashboard,
+  Settings,
+  Users,
+  FileText,
+  BarChart3,
+  Inbox,
+  Layers,
+  Calendar,
+  MessageSquare,
+  Grid3X3,
+  Star,
+  Clock,
+  Building,
+  Briefcase,
+  Headphones,
+  LineChart,
+  PieChart,
+  Activity,
+  Database,
+  UserPlus,
+  Shield,
+  HelpCircle,
+  Ticket,
+  Cpu,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Sidebar as UISidebar, SidebarHeader, SidebarContent, SidebarFooter, useSidebar } from "@/components/ui/sidebar"
 
 interface SidebarProps {
-  session: any; // Replace with proper session type
+  pathname: string
+  session: any
 }
 
-export function Sidebar({ session }: SidebarProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [isHovering, setIsHovering] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [activeGroup, setActiveGroup] = React.useState<string | null>(null);
-
-  const shouldExpand = isCollapsed && isHovering;
-
-  // Filter navigation based on search
-  const filteredNavigation = React.useMemo(() => {
-    if (!searchQuery) return navigation;
-
-    return navigation
-      .map((group) => ({
-        ...group,
-        items: group.items.filter(
-          (item) =>
-            item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.children?.some((child) =>
-              child.label.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-        ),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [searchQuery]);
-
-  const isPathActive = (path: string) =>
-    pathname === path || pathname?.startsWith(path + "/");
-
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-    setIsHovering(false);
-  };
-
-  const variants = {
-    expanded: {
-      width: 280,
-      transition: {
-        type: "tween",
-        duration: 0.2,
+// Navigation items with sub-items
+const navigation = [
+  {
+    title: "Home",
+    items: [
+      { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/dashboard/favorites", label: "Favorites", icon: Star },
+      { path: "/dashboard/recent", label: "Recent", icon: Clock },
+    ],
+  },
+  {
+    title: "Applications",
+    items: [
+      {
+        path: "/dashboard/apps",
+        label: "App Directory",
+        icon: Grid3X3,
+        children: [
+          { path: "/dashboard/apps", label: "All Applications" },
+          { path: "/dashboard/apps/favorites", label: "Favorites" },
+          { path: "/dashboard/app-registry", label: "App Registry" },
+        ],
       },
-    },
-    collapsed: {
-      width: 70,
-      transition: {
-        type: "tween",
-        duration: 0.3,
+      {
+        path: "/dashboard/erp",
+        label: "ERP System",
+        icon: Building,
       },
-    },
-  };
+      {
+        path: "/dashboard/crm",
+        label: "CRM",
+        icon: Briefcase,
+      },
+      {
+        path: "/dashboard/hr",
+        label: "HR Portal",
+        icon: Users,
+      },
+      {
+        path: "/dashboard/helpdesk",
+        label: "Help Desk",
+        icon: Headphones,
+        badge: { text: "3", variant: "default" },
+      },
+    ],
+  },
+  {
+    title: "Workspace",
+    items: [
+      {
+        path: "/dashboard/projects",
+        label: "Projects",
+        icon: Layers,
+        children: [
+          { path: "/dashboard/projects/active", label: "Active Projects" },
+          { path: "/dashboard/projects/archived", label: "Archived" },
+          { path: "/dashboard/projects/templates", label: "Templates" },
+        ],
+      },
+      {
+        path: "/dashboard/documents",
+        label: "Documents",
+        icon: FileText,
+        children: [
+          { path: "/dashboard/documents/shared", label: "Shared with me" },
+          { path: "/dashboard/documents/recent", label: "Recent" },
+          { path: "/dashboard/documents/starred", label: "Starred" },
+        ],
+      },
+      { path: "/dashboard/calendar", label: "Calendar", icon: Calendar },
+    ],
+  },
+  {
+    title: "Communication",
+    items: [
+      {
+        path: "/dashboard/inbox",
+        label: "Inbox",
+        icon: Inbox,
+        badge: { text: "5", variant: "default" },
+      },
+      {
+        path: "/dashboard/messages",
+        label: "Messages",
+        icon: MessageSquare,
+        badge: { text: "2", variant: "default" },
+      },
+      { path: "/dashboard/tickets", label: "Tickets", icon: Ticket },
+    ],
+  },
+  {
+    title: "Analytics",
+    items: [
+      { path: "/dashboard/analytics/overview", label: "Overview", icon: BarChart3 },
+      { path: "/dashboard/analytics/reports", label: "Reports", icon: LineChart },
+      { path: "/dashboard/analytics/metrics", label: "Key Metrics", icon: PieChart },
+      { path: "/dashboard/analytics/activity", label: "User Activity", icon: Activity },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      {
+        path: "/dashboard/settings",
+        label: "Settings",
+        icon: Settings,
+        children: [
+          { path: "/dashboard/settings/general", label: "General" },
+          { path: "/dashboard/settings/appearance", label: "Appearance" },
+          { path: "/dashboard/settings/notifications", label: "Notifications" },
+        ],
+      },
+      { path: "/dashboard/app-registry", label: "App Registry", icon: Database },
+      { path: "/dashboard/users-management", label: "Users", icon: UserPlus },
+      { path: "/dashboard/security", label: "Security", icon: Shield },
+      { path: "/dashboard/system", label: "System", icon: Cpu },
+    ],
+  },
+]
+
+export function Sidebar({ pathname, session }: SidebarProps) {
+  const router = useRouter()
+  const { collapsed, shouldExpand } = useSidebar()
+  const [activeGroup, setActiveGroup] = React.useState<string | null>(null)
+
+  // Path active check - memoized for performance
+  const isPathActive = React.useCallback(
+    (path: string) => pathname === path || pathname?.startsWith(path + "/"),
+    [pathname],
+  )
+
+  // Initialize active groups based on current path
+  React.useEffect(() => {
+    navigation.forEach((group) => {
+      group.items.forEach((item) => {
+        if (item.children && isPathActive(item.path)) {
+          setActiveGroup(item.path)
+        }
+      })
+    })
+  }, [pathname, isPathActive])
 
   return (
     <TooltipProvider delayDuration={0}>
-      <motion.aside
-        initial={false}
-        variants={variants}
-        animate={
-          shouldExpand ? "expanded" : isCollapsed ? "collapsed" : "expanded"
-        }
-        // animate={{
-        //   width: shouldExpand ? 280 : isCollapsed ? 70 : 280,
-        // }}
-        // transition={{
-        //   duration: 0.2,
-        //   type: "tween", // Use tween interpolation for smoother animation
-        // }}
-        onMouseEnter={() => setTimeout(() => setIsHovering(true), 0)}
-        onMouseLeave={() => setTimeout(() => setIsHovering(false), 700)}
-        className="relative flex h-screen flex-col border-r bg-background"
-      >
-        {/* Header */}
-        <div className="flex h-14 items-center border-b px-4">
-          <div
-            className={cn(
-              "flex items-center",
-              // Remove justify-center when expanded or hovered
-              isCollapsed && !shouldExpand && "justify-center w-full"
-            )}
-          >
+      <UISidebar>
+        {/* Logo */}
+        <SidebarHeader>
+          <div className={cn("flex items-center h-full", collapsed && !shouldExpand && "justify-center w-full")}>
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-              <Zap className="h-3.5 w-3.5 text-primary-foreground" />
+              <Zap className="h-3 w-3 text-primary-foreground" />
             </div>
-            {(!isCollapsed || shouldExpand) && (
-              <span className="ml-2 font-semibold">OneUI</span>
-            )}
+            {(!collapsed || shouldExpand) && <span className="ml-2 font-semibold text-lg">OneUI</span>}
           </div>
-        </div>
-        {/* Floating Toggle Button */}
-        <Button
-          variant="outline"
-          size="icon"
-          className={cn(
-            "absolute -right-4 top-3 z-50",
-            "h-8 w-8",
-            "rounded-xl border",
-            "bg-background shadow-md",
-            "hover:bg-accent hover:text-accent-foreground",
-            "transition-transform duration-200",
-            "z-50"
-          )}
-          onClick={toggleCollapse}
-        >
-          <motion.div
-            animate={{ rotate: isCollapsed ? 0 : 180 }}
-            transition={{ duration: 0.2 }}
-          >
-            <SidebarIcon className="h-4 w-4" />
-          </motion.div>
-        </Button>
-        {/* Search */}
-        <div className="p-4">
-          {!isCollapsed || shouldExpand ? (
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="w-full"
-                  onClick={() => setIsCollapsed(false)}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Search</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+        </SidebarHeader>
+
         {/* Navigation */}
-        <ScrollArea className="flex-1">
-          <AnimatePresence initial={false}>
-            {filteredNavigation.map((group) => (
-              <div key={group.title} className="px-4 py-2">
-                {(!isCollapsed || shouldExpand) && (
-                  <h3 className="mb-2 px-2 text-xs font-medium text-muted-foreground">
-                    {group.title}
-                  </h3>
-                )}
-                <div className="space-y-1">
-                  {group.items.map((item) => {
-                    const isActive = isPathActive(item.path);
-                    return (
-                      <React.Fragment key={item.path}>
-                        <Button
-                          variant={isActive ? "secondary" : "ghost"}
-                          className={cn(
-                            "w-full justify-start",
-                            isCollapsed && !shouldExpand && "justify-center"
-                          )}
-                          onClick={() => {
-                            if (item.children) {
-                              setActiveGroup(
-                                activeGroup === item.path ? null : item.path
-                              );
-                            } else {
-                              router.push(item.path);
-                            }
-                          }}
-                        >
-                          <item.icon
-                            className={cn(
-                              "h-4 w-4",
-                              (!isCollapsed || shouldExpand) && "mr-2"
-                            )}
-                          />
-                          {(!isCollapsed || shouldExpand) && (
-                            <>
-                              <span>{item.label}</span>
-                              {item.badge && (
-                                <Badge
-                                  variant={item.badge.variant}
-                                  className="ml-auto"
-                                >
-                                  {item.badge.text}
-                                </Badge>
-                              )}
-                              {item.children && (
-                                <ChevronRight
-                                  className={cn(
-                                    "ml-auto h-4 w-4 transition-transform",
-                                    activeGroup === item.path && "rotate-90"
-                                  )}
+        <SidebarContent className="pt-2">
+          <ScrollArea className="h-full px-3">
+            <div className="space-y-6 py-2">
+              {/* Navigation Groups */}
+              {navigation.map((group) => (
+                <div key={group.title} className="space-y-1">
+                  {(!collapsed || shouldExpand) && (
+                    <h3 className="mb-1 px-2 text-xs font-medium text-muted-foreground">{group.title}</h3>
+                  )}
+                  <div className="space-y-1">
+                    {group.items.map((item) => {
+                      const isActive = isPathActive(item.path)
+                      const hasChildren = item.children && item.children.length > 0
+                      const isGroupActive = activeGroup === item.path
+
+                      return (
+                        <React.Fragment key={item.path}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={isActive ? "secondary" : "ghost"}
+                                className={cn(
+                                  "w-full justify-start h-9 px-2",
+                                  collapsed && !shouldExpand && "justify-center px-0",
+                                )}
+                                onClick={() => {
+                                  if (hasChildren) {
+                                    setActiveGroup(isGroupActive ? null : item.path)
+                                  } else {
+                                    router.push(item.path)
+                                  }
+                                }}
+                              >
+                                <item.icon
+                                  className={cn("h-4 w-4 flex-shrink-0", (!collapsed || shouldExpand) && "mr-2")}
                                 />
-                              )}
-                            </>
-                          )}
-                        </Button>
-                        {(!isCollapsed || shouldExpand) &&
-                          item.children &&
-                          activeGroup === item.path && (
+                                {(!collapsed || shouldExpand) && (
+                                  <>
+                                    <span className="truncate text-sm">{item.label}</span>
+                                    {item.badge && (
+                                      <Badge variant={item.badge.variant} className="ml-auto text-xs py-0 h-5">
+                                        {item.badge.text}
+                                      </Badge>
+                                    )}
+                                    {hasChildren && (
+                                      <ChevronRight
+                                        className={cn(
+                                          "ml-auto h-4 w-4 flex-shrink-0 transition-transform duration-200",
+                                          isGroupActive && "rotate-90",
+                                        )}
+                                      />
+                                    )}
+                                  </>
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            {collapsed && !shouldExpand && (
+                              <TooltipContent side="right" sideOffset={10} className="flex items-center gap-2">
+                                {item.label}
+                                {item.badge && <Badge variant={item.badge.variant}>{item.badge.text}</Badge>}
+                                {hasChildren && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+
+                          {/* Submenu items */}
+                          {(!collapsed || shouldExpand) && hasChildren && isGroupActive && (
                             <motion.div
-                              initial={{ height: 0 }}
-                              animate={{ height: "auto" }}
-                              exit={{ height: 0 }}
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
                             >
-                              <div className="ml-4 mt-1 space-y-1">
+                              <div className="ml-6 mt-1 space-y-1 border-l pl-2 pt-1">
                                 {item.children.map((child) => (
                                   <Button
                                     key={child.path}
-                                    variant={
-                                      isPathActive(child.path)
-                                        ? "secondary"
-                                        : "ghost"
-                                    }
-                                    className="w-full justify-start"
+                                    variant={isPathActive(child.path) ? "secondary" : "ghost"}
+                                    size="sm"
+                                    className="w-full justify-start h-8 text-xs"
                                     onClick={() => router.push(child.path)}
                                   >
-                                    {child.label}
+                                    <span className="truncate">{child.label}</span>
                                   </Button>
                                 ))}
                               </div>
                             </motion.div>
                           )}
-                      </React.Fragment>
-                    );
-                  })}
+                        </React.Fragment>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </AnimatePresence>
-        </ScrollArea>
-        {/* User Profile */}
-        <div className="mt-auto border-t p-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  isCollapsed && !shouldExpand && "justify-center"
-                )}
-              >
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src="/placeholder.jpg" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-                {(!isCollapsed || shouldExpand) && (
-                  <span className="ml-2"> {session?.user?.name || "N/A"}</span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {utilityItems.map((item) => (
-                <DropdownMenuItem
-                  key={item.path}
-                  onClick={() => router.push(item.path)}
-                >
-                  <item.icon className="mr-2 h-4 w-4" />
-                  <span>{item.label}</span>
-                  {item.badge && (
-                    <Badge variant={item.badge.variant} className="ml-auto">
-                      {item.badge.text}
-                    </Badge>
-                  )}
-                </DropdownMenuItem>
               ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        {/* Collapse/Expand Toggle */}
-        {/* {isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute -right-3 top-20 h-6 w-6 rounded-full border bg-background shadow-md z-50"
-            onClick={toggleCollapse}
-          >
-            <ChevronRight className="h-3 w-3" />
-          </Button>
-        )} */}
-      </motion.aside>
+            </div>
+          </ScrollArea>
+        </SidebarContent>
+
+        {/* Help Section in Footer */}
+        <SidebarFooter className="p-0">
+          <div className="border-t pt-2 pb-3 px-3">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start h-9 px-2 text-muted-foreground hover:text-foreground",
+                collapsed && !shouldExpand && "justify-center",
+              )}
+              onClick={() => router.push("/dashboard/help")}
+            >
+              <HelpCircle className={cn("h-4 w-4", (!collapsed || shouldExpand) && "mr-2")} />
+              {(!collapsed || shouldExpand) && <span className="text-sm">Help & Support</span>}
+            </Button>
+          </div>
+        </SidebarFooter>
+      </UISidebar>
     </TooltipProvider>
-  );
+  )
 }
+

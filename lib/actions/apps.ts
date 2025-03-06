@@ -32,6 +32,20 @@ export async function getRegisteredApps(): Promise<App[]> {
     : [];
 }
 
+// ✅ Get a specific app by slug
+export async function getApp(slug: string): Promise<App | null> {
+  const apps = await getRegisteredApps();
+  const app = apps.find((app) => app.slug === slug);
+  return app || null;
+}
+
+// ✅ Get a specific app by ID
+export async function getAppById(id: string): Promise<App | null> {
+  const apps = await getRegisteredApps();
+  const app = apps.find((app) => app.id === id);
+  return app || null;
+}
+
 // ✅ Register a new app
 export async function registerApp(
   appData: Omit<App, "id" | "createdAt" | "updatedAt">

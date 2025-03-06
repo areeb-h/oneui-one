@@ -4,17 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { EditAppModal } from "./edit-modal";
 import { CreateAppModal } from "./create-modal";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  Grid,
-  List,
-  Plus,
-  MoreVertical,
-  ExternalLink,
-  Power,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { Search, Grid, List, Plus, MoreVertical, ExternalLink, Power, Edit, Trash2, Filter, SlidersHorizontal, Download, Upload } from 'lucide-react';
 import {
   getRegisteredApps,
   deleteApp,
@@ -32,8 +22,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 const AppCardSkeleton = ({ view }: { view: "grid" | "list" }) => (
   <div
@@ -43,44 +36,44 @@ const AppCardSkeleton = ({ view }: { view: "grid" | "list" }) => (
     `}
   >
     <div className={`${view === "list" ? "flex-shrink-0" : ""}`}>
-      <div className="w-12 h-12 rounded-lg bg-gray-200 animate-pulse" />
+      <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
     </div>
     <div className={`${view === "list" ? "flex-1" : "mt-4"}`}>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-4 w-24 bg-gray-200 rounded" />
-            <div className="h-4 w-16 bg-gray-200 rounded" />
+            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
           </div>
-          <div className="h-8 w-8 bg-gray-200 rounded-full" />
+          <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
         </div>
         <div className="space-y-2">
-          <div className="h-3 w-full bg-gray-200 rounded" />
-          <div className="h-3 w-3/4 bg-gray-200 rounded" />
+          <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-700 rounded" />
         </div>
         <div className="flex gap-2">
-          <div className="h-4 w-16 bg-gray-200 rounded" />
-          <div className="h-4 w-16 bg-gray-200 rounded" />
+          <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
         </div>
         <div className="flex justify-between">
-          <div className="h-3 w-20 bg-gray-200 rounded" />
-          <div className="h-3 w-20 bg-gray-200 rounded" />
+          <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
         </div>
       </div>
     </div>
   </div>
 );
 
-export default function AppsDashboard() {
+export default function Apps() {
   const [apps, setApps] = useState<App[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [editingApp, setEditingApp] = useState<App | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("all");
 
   const fetchApps = useCallback(async () => {
     try {
@@ -159,233 +152,213 @@ export default function AppsDashboard() {
     [apps]
   );
 
-  const filteredApps = useMemo(
-    () =>
-      apps.filter((app) => {
-        const matchesSearch =
-          app.name.toLowerCase().includes(search.toLowerCase()) ||
-          app.description?.toLowerCase().includes(search.toLowerCase());
-        const matchesCategory =
-          !selectedCategory || app.category === selectedCategory;
-        return matchesSearch && matchesCategory;
-      }),
-    [apps, search, selectedCategory]
+  const departments = useMemo(
+    () => [...new Set(apps.map((app) => app.department))],
+    [apps]
   );
 
+  const filteredApps = useMemo(() => {
+    let filtered = apps;
+    
+    // Filter by search
+    if (search) {
+      filtered = filtered.filter(app => 
+        app.name.toLowerCase().includes(search.toLowerCase()) ||
+        app.description?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    // Filter by category
+    if (selectedCategory) {
+      filtered = filtered.filter(app => app.category === selectedCategory);
+    }
+    
+    // Filter by department
+    if (selectedDepartment) {
+      filtered = filtered.filter(app => app.department === selectedDepartment);
+    }
+    
+    // Filter by tab
+    if (activeTab === "running") {
+      filtered = filtered.filter(app => app.status === "running");
+    } else if (activeTab === "maintenance") {
+      filtered = filtered.filter(app => app.status === "under maintenance");
+    }
+    
+    return filtered;
+  }, [apps, search, selectedCategory, selectedDepartment, activeTab]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedCategory(null);
+    setSelectedDepartment(null);
+    setActiveTab("all");
+  };
+
+  const hasActiveFilters = search || selectedCategory || selectedDepartment || activeTab !== "all";
+
   return (
-    <div className="min-h-screen space-y-8 p-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <motion.h1
-            className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            Manage Apps
-          </motion.h1>
-          <motion.p
-            className="text-muted-foreground"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            Configure and manage your application directory
-          </motion.p>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Application Directory</h2>
+          <p className="text-sm text-muted-foreground">
+            Browse and manage your organization's applications
+          </p>
         </div>
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="shadow-md hover:shadow-lg transition-shadow"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add New App
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-1">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span className="sr-only md:not-sr-only md:inline-block">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsCreateModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add New App
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Upload className="mr-2 h-4 w-4" />
+                Import Apps
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Download className="mr-2 h-4 w-4" />
+                Export Apps
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button onClick={() => setIsCreateModalOpen(true)} className="h-8">
+            <Plus className="mr-2 h-3.5 w-3.5" />
+            <span>Add App</span>
+          </Button>
+        </div>
       </div>
 
-      <motion.div
-        className="flex flex-col sm:flex-row gap-4 items-center"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div className="relative flex-1 w-full">
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="all">All Apps</TabsTrigger>
+            <TabsTrigger value="running">Running</TabsTrigger>
+            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+          </TabsList>
+          
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1">
+                  <Filter className="h-3.5 w-3.5" />
+                  <span className="sr-only md:not-sr-only md:inline-block">Filter</span>
+                  {hasActiveFilters && <Badge variant="secondary" className="ml-1 rounded-sm px-1 font-normal">
+                    {(search ? 1 : 0) + (selectedCategory ? 1 : 0) + (selectedDepartment ? 1 : 0)}
+                  </Badge>}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                <div className="p-2">
+                  <p className="mb-2 text-xs font-medium">Category</p>
+                  <select
+                    className="w-full rounded-md border border-input px-3 py-1 text-sm"
+                    value={selectedCategory || ""}
+                    onChange={(e) => setSelectedCategory(e.target.value || null)}
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="p-2">
+                  <p className="mb-2 text-xs font-medium">Department</p>
+                  <select
+                    className="w-full rounded-md border border-input px-3 py-1 text-sm"
+                    value={selectedDepartment || ""}
+                    onChange={(e) => setSelectedDepartment(e.target.value || null)}
+                  >
+                    <option value="">All Departments</option>
+                    {departments.map((department) => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={clearFilters} disabled={!hasActiveFilters}>
+                  Clear Filters
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <div className="flex items-center border rounded-lg">
+              <Button
+                variant={view === "grid" ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => setView("grid")}
+                className="h-8 w-8 transition-all"
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={view === "list" ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => setView("list")}
+                className="h-8 w-8 transition-all"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="relative my-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search applications..."
-            className="pl-10 shadow-sm focus:shadow-md transition-shadow"
+            className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <select
-            className="px-4 py-2 rounded-lg border focus:ring-2 ring-primary shadow-sm"
-            value={selectedCategory || ""}
-            onChange={(e) => setSelectedCategory(e.target.value || null)}
-          >
-            <option value="">All Categories</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex items-center border rounded-lg shadow-sm">
-            <Button
-              variant={view === "grid" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => setView("grid")}
-              className="transition-all"
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={view === "list" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => setView("list")}
-              className="transition-all"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </motion.div>
-
-      <div
-        className={`grid gap-6 ${
-          view === "grid"
-            ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-            : "grid-cols-1"
-        }`}
-      >
-        {isLoading ? (
-          [...Array(6)].map((_, index) => (
-            <AppCardSkeleton key={index} view={view} />
-          ))
-        ) : filteredApps.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="col-span-full text-center py-12"
-          >
-            <div className="rounded-lg border bg-card p-8 max-w-md mx-auto shadow-lg">
-              <h3 className="font-semibold mb-1">No apps found</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {search || selectedCategory
-                  ? "No apps match your current filter"
-                  : "Get started by adding your first application"}
-              </p>
-              <Button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="shadow-md hover:shadow-lg transition-shadow"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add New App
-              </Button>
-            </div>
-          </motion.div>
-        ) : (
-          <AnimatePresence>
-            {filteredApps.map((app) => (
-              <motion.div
-                key={app.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className={`
-                  group relative rounded-xl border bg-card
-                  hover:shadow-lg transition-all duration-300
-                  ${view === "list" ? "flex items-center gap-6 p-4" : "p-6"}
-                `}
-              >
-                <div className={view === "list" ? "flex-shrink-0" : ""}>
-                  {app.icon ? (
-                    <img
-                      src={app.icon}
-                      alt={app.name}
-                      className="w-12 h-12 rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <span className="text-xl">{app.name[0]}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className={`${view === "list" ? "flex-1" : "mt-4"}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-semibold">{app.name}</h2>
-                      <Badge
-                        variant={
-                          app.status === "running" ? "default" : "secondary"
-                        }
-                      >
-                        {app.status}
-                      </Badge>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => window.open(app.appUrl, "_blank")}
-                        >
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Open App
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleToggleStatus(app.id)}
-                        >
-                          <Power className="mr-2 h-4 w-4" />
-                          Toggle Status
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setEditingApp(app)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => handleDelete(app.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {app.description || "No description"}
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Badge variant="outline">{app.category}</Badge>
-                    <Badge variant="secondary">{app.department}</Badge>
-                    {app.tags?.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{app.department}</span>
-                    <span>
-                      Updated {new Date(app.updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        )}
-      </div>
+        <TabsContent value="all" className="mt-0">
+          <AppGrid 
+            apps={filteredApps} 
+            view={view} 
+            isLoading={isLoading}
+            onEdit={setEditingApp}
+            onDelete={handleDelete}
+            onToggleStatus={handleToggleStatus}
+            onCreateNew={() => setIsCreateModalOpen(true)}
+          />
+        </TabsContent>
+        <TabsContent value="running" className="mt-0">
+          <AppGrid 
+            apps={filteredApps} 
+            view={view} 
+            isLoading={isLoading}
+            onEdit={setEditingApp}
+            onDelete={handleDelete}
+            onToggleStatus={handleToggleStatus}
+            onCreateNew={() => setIsCreateModalOpen(true)}
+          />
+        </TabsContent>
+        <TabsContent value="maintenance" className="mt-0">
+          <AppGrid 
+            apps={filteredApps} 
+            view={view} 
+            isLoading={isLoading}
+            onEdit={setEditingApp}
+            onDelete={handleDelete}
+            onToggleStatus={handleToggleStatus}
+            onCreateNew={() => setIsCreateModalOpen(true)}
+          />
+        </TabsContent>
+      </Tabs>
 
       <CreateAppModal
         open={isCreateModalOpen}
@@ -400,6 +373,153 @@ export default function AppsDashboard() {
           onSubmit={handleEdit}
         />
       )}
+    </div>
+  );
+}
+
+interface AppGridProps {
+  apps: App[];
+  view: "grid" | "list";
+  isLoading: boolean;
+  onEdit: (app: App) => void;
+  onDelete: (id: string) => void;
+  onToggleStatus: (id: string) => void;
+  onCreateNew: () => void;
+}
+
+function AppGrid({ apps, view, isLoading, onEdit, onDelete, onToggleStatus, onCreateNew }: AppGridProps) {
+  const router = useRouter(); 
+  
+  if (isLoading) {
+    return (
+      <div className={`grid gap-4 ${view === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+        {[...Array(6)].map((_, index) => (
+          <AppCardSkeleton key={index} view={view} />
+        ))}
+      </div>
+    );
+  }
+
+  if (apps.length === 0) {
+    return (
+      <Card className="flex flex-col items-center justify-center p-8 text-center">
+        <div className="mx-auto mb-4 rounded-full bg-primary/10 p-3">
+          <Search className="h-6 w-6 text-primary" />
+        </div>
+        <h3 className="mb-1 text-lg font-semibold">No applications found</h3>
+        <p className="mb-4 text-sm text-muted-foreground max-w-md">
+          No applications match your current filters. Try adjusting your search or filters, or add a new application.
+        </p>
+        <Button onClick={onCreateNew}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add New App
+        </Button>
+      </Card>
+    );
+  }
+
+  return (
+    <div className={`grid gap-4 ${view === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+      <AnimatePresence>
+        {apps.map((app) => (
+          <motion.div
+            key={app.id}
+            layout
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className={`
+              group relative rounded-xl border bg-card
+              hover:shadow-md transition-all duration-300
+              ${view === "list" ? "flex items-center gap-6 p-4" : "p-6"}
+            `}
+          >
+            <div className={view === "list" ? "flex-shrink-0" : ""}>
+              {app.icon ? (
+                <img
+                  src={app.icon || "/placeholder.svg"}
+                  alt={app.name}
+                  className="w-12 h-12 rounded-lg"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <span className="text-xl font-medium">{app.name[0]}</span>
+                </div>
+              )}
+            </div>
+
+            <div className={`${view === "list" ? "flex-1" : "mt-4"}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold">{app.name}</h2>
+                  <Badge
+                    variant={
+                      app.status === "running" ? "default" : "secondary"
+                    }
+                    className="text-xs"
+                  >
+                    {app.status}
+                  </Badge>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => router.push(`/apps/${app.slug}`)}
+                  >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Open App
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onToggleStatus(app.id)}
+                    >
+                      <Power className="mr-2 h-4 w-4" />
+                      Toggle Status
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(app)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => onDelete(app.id)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {app.description || "No description"}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Badge variant="outline">{app.category}</Badge>
+                <Badge variant="secondary">{app.department}</Badge>
+                {app.tags?.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="bg-secondary/50">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+
+              <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{app.department}</span>
+                <span>
+                  Updated {new Date(app.updatedAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
